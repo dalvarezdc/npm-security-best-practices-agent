@@ -719,6 +719,9 @@ Some developers automatically upgrade all dependencies to the latest versions as
 > ```bash
 > $ npm update
 > $ npx npm-check-updates -u
+> $ pnpm update
+> $ yarn up
+> $ bun update
 > ```
 
 > [!NOTE]
