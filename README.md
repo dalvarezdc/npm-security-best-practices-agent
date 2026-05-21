@@ -133,6 +133,10 @@ blockExoticSubdeps: true
 - 16 [Do not trust the official npmjs.org registry](#16-do-not-trust-the-official-npmjsorg-registry)
 - 17 [Prevent dependency confusion attacks](#17-prevent-dependency-confusion-attacks)
 
+**Resources:**
+
+- [FAQ](#faq)
+
 ---
 
 ## 1. Disable Post-Install Scripts
@@ -1098,6 +1102,18 @@ npmScopes:
 - **Claim your internal package names on the public registry**: Publish placeholder packages to npmjs.org for any unscoped internal names you cannot immediately migrate to scoped names.
 - **Use `lockfile-lint`** (see [section 5](#5-prevent-npm-lockfile-injection)) to verify that resolved package URLs point to expected registries.
 - **Enable `blockExoticSubdeps`** in pnpm (see [section 5](#5-prevent-npm-lockfile-injection)) to prevent transitive dependencies from pulling packages from unexpected sources.
+
+---
+
+## FAQ
+
+### Q. How to reconcile security fixes with minimum release age?
+
+Question: The scenario is where a project enforces a package freshness policy such as pnpm's `minimumReleaseAge` or npm's `min-release-age` directives. Yet, some of the packages used in a project may receive security fixes that need to be rushed (and shouldn't wait the time threshold such as 7 days or more until a new version for the package is installed). What is the recommended workflow to support that?
+
+Answer: The following workflows are supported to address this issue:
+1. pnpm has built-in capabilities to address this by running `pnpm audit --fix` which maintains the package freshness policy but allows exception for where a fix is required to upgrade a package, which then updates the `pnpm-workspace.yaml` file with specific exclusions for the package with the freshness override.
+2. Renovate has support for pnpm's package freshness policy and when packages are upgraded for a fix, the `pnpm-workspace.yaml` file will get updated with exclusions for the updated package.
 
 ---
 
