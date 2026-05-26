@@ -105,7 +105,7 @@ Newly published packages are a primary attack vector — compromised versions ar
 min-release-age=30
 ```
 ```bash
-npm config set min-release-age 3
+npm config set min-release-age 30
 # or one-off with dynamic date:
 npm install express --before="$(date -v -7d)"
 ```
