@@ -1,0 +1,35 @@
+name: npm-security-best-practices
+description: >
+  17 security practices for npm, pnpm, Bun, and Yarn covering supply chain
+  hardening, safe installation, lockfile integrity, and npm maintainer security.
+  Includes hardened configs for .npmrc, pnpm-workspace.yaml, and npx execution
+  that agents can copy directly into user projects.
+author: dalvarezdc
+version: 1.0.0
+license: MIT
+
+compatibility:
+  - gemini-cli
+  - opencode
+
+trigger: >
+  Load this skill when you are about to run npm install, pnpm add, bun add,
+  yarn add, or npx; write or review .npmrc, pnpm-workspace.yaml, bunfig.toml,
+  or .yarnrc.yml; review or commit a lockfile (package-lock.json, pnpm-lock.yaml,
+  bun.lock); configure Dependabot, Renovate, or Snyk automated PRs; publish a
+  package to the npm registry; or evaluate a new npm dependency for adoption.
+
+assets:
+  - path: assets/.npmrc
+    description: Hardened npm baseline config (ignore-scripts, allow-git=none, min-release-age=30)
+  - path: assets/pnpm-workspace.yaml
+    description: Hardened pnpm workspace config (minimumReleaseAge, trustPolicy, allowBuilds, strictDepBuilds, blockExoticSubdeps)
+  - path: assets/npx-offline-pattern.sh
+    description: Shell script implementing the two-step hardened npx execution pattern
+
+references:
+  - path: references/reference.md
+    description: Full condensed reference for all 17 practices across npm, pnpm, Bun, and Yarn
+
+repository: https://github.com/dalvarezdc/npm-security-best-practices-agent
+skill_path: skills/npm-security-best-practices

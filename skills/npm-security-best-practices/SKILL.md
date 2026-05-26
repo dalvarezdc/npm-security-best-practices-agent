@@ -13,7 +13,7 @@ hardening, safe installation, lockfile integrity, and maintainer security.
 **Core principle:** Default npm settings are not secure. Each practice corrects
 a specific attack vector with a concrete configuration change.
 
-**For full detail on any practice, see `reference.md` in this directory.**
+**For full detail on any practice, see `references/reference.md` in this directory.**
 
 ## When to Use
 
@@ -115,7 +115,21 @@ npx --include-workspace-root --workspace $HOME/mcp --no --offline \
   @modelcontextprotocol/server-filesystem /path/to/dir
 ```
 
-## Load reference.md for full detail
+## Assets — Copy directly into user projects
+
+The `assets/` directory contains ready-to-use configuration files. When a
+user needs a hardened config, copy the appropriate asset to their project root:
+
+| File | Copy to | Description |
+|------|---------|-------------|
+| `assets/.npmrc` | `.npmrc` | Hardened npm baseline (`ignore-scripts`, `allow-git=none`, `min-release-age=30`) |
+| `assets/pnpm-workspace.yaml` | `pnpm-workspace.yaml` | Hardened pnpm baseline (`minimumReleaseAge`, `trustPolicy`, `allowBuilds`, `strictDepBuilds`, `blockExoticSubdeps`) |
+| `assets/npx-offline-pattern.sh` | Reference / adapt | Two-step hardened npx execution (pre-install workspace + offline-only invocation) |
+
+Each file contains inline comments explaining the security purpose of every
+setting and the minimum package manager version required.
+
+## Load references/reference.md for full detail
 
 For complete explanations, all config options, Bun/Yarn equivalents, CI/CD
-integration patterns, and FAQ, read `reference.md` in this directory.
+integration patterns, and FAQ, read `references/reference.md` in this directory.
