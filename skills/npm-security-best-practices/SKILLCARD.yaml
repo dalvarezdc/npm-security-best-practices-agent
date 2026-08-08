@@ -1,35 +1,36 @@
 name: npm-security-best-practices
 description: >
-  17 security practices for npm, pnpm, Bun, and Yarn covering supply chain
-  hardening, safe installation, lockfile integrity, and npm maintainer security.
-  Includes hardened configs for .npmrc, pnpm-workspace.yaml, and npx execution
-  that agents can copy directly into user projects.
+  Implement basic npm/pnpm/yarn/bun supply-chain hardening in the current
+  repository. Merges a 14-day cooldown baseline and related security keys from
+  assets into project config; supports audit, npx offline runs, and publish paths.
 author: dalvarezdc
-version: 1.0.0
+version: 1.1.0
 license: MIT
 
 compatibility:
+  - grok
   - gemini-cli
   - opencode
+  - claude
+  - cursor
 
 trigger: >
-  Load this skill when you are about to run npm install, pnpm add, bun add,
-  yarn add, or npx; write or review .npmrc, pnpm-workspace.yaml, bunfig.toml,
-  or .yarnrc.yml; review or commit a lockfile (package-lock.json, pnpm-lock.yaml,
-  bun.lock); configure Dependabot, Renovate, or Snyk automated PRs; publish a
-  package to the npm registry; or evaluate a new npm dependency for adoption.
+  Load this skill to harden npm security in the current repo, or when about to
+  run npm install / pnpm add / bun add / yarn add / npx; write or review .npmrc,
+  pnpm-workspace.yaml, bunfig.toml, or .yarnrc.yml; review lockfiles; configure
+  Dependabot, Renovate, or Snyk; publish to npm; or evaluate a new dependency.
 
 assets:
   - path: assets/.npmrc
-    description: Hardened npm baseline config (ignore-scripts, allow-git=none, min-release-age=30)
+    description: Canonical npm baseline (ignore-scripts, allow-git=none, min-release-age=14) — merge only
   - path: assets/pnpm-workspace.yaml
-    description: Hardened pnpm workspace config (minimumReleaseAge, trustPolicy, allowBuilds, strictDepBuilds, blockExoticSubdeps)
+    description: Canonical pnpm security keys (14-day minimumReleaseAge, trustPolicy, strictDepBuilds, blockExoticSubdeps) — merge only
   - path: assets/npx-offline-pattern.sh
-    description: Shell script implementing the two-step hardened npx execution pattern
+    description: Parameterized offline npx helper (install | run | update)
 
 references:
   - path: references/reference.md
-    description: Full condensed reference for all 17 practices across npm, pnpm, Bun, and Yarn
+    description: Full condensed reference for practices P01–P17
 
 repository: https://github.com/dalvarezdc/npm-security-best-practices-agent
 skill_path: skills/npm-security-best-practices

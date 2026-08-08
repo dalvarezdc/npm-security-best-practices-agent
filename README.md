@@ -40,7 +40,7 @@ Expand below to access a quick copy/paste secure-by-default configuration for `n
 
 ```ini
 # npm security best practices
-# Source: https://github.com/lirantal/npm-security-best-practices
+# Canonical agent skill baseline: skills/npm-security-best-practices/assets/.npmrc
 
 # SECURITY: do not run any lifecycle scripts (postinstall) etc
 ignore-scripts=true
@@ -48,8 +48,8 @@ ignore-scripts=true
 # SECURITY: reject git-source dependencies (git+ssh:// etc)
 allow-git=none
 
-# SECURITY: block packages newer than 30 days
-min-release-age=30
+# SECURITY: block packages newer than 14 days
+min-release-age=14
 ```
 
 </details>
@@ -59,10 +59,11 @@ min-release-age=30
 
 ```yaml
 # npm security best practices
-# Source: https://github.com/lirantal/npm-security-best-practices
+# Canonical agent skill baseline: skills/npm-security-best-practices/assets/pnpm-workspace.yaml
+# MERGE these keys into an existing workspace file — do not wipe packages:/catalog:
 
-# SECURITY: block packages newer than 30 days (43200 minutes)
-minimumReleaseAge: 43200
+# SECURITY: block packages newer than 14 days (20160 minutes)
+minimumReleaseAge: 20160
 
 # SECURITY: reject a version whose publishing trust signals regressed
 trustPolicy: no-downgrade
@@ -72,17 +73,15 @@ trustPolicy: no-downgrade
 #   - 'chokidar@4.0.3'
 #   - 'webpack@4.47.0 || 5.102.1'
 
-# SECURITY: pnpm blocks install scripts by default, enabled explicitly for:
-allowBuilds:
-  esbuild: true
-  rolldown: true
-  unrs-resolver: true
+# SECURITY: pnpm blocks install scripts by default; allow only after vetting:
+# allowBuilds:
+#   esbuild: true
 
 # SECURITY: fail the install if a dependency wants to run a build
 # script that isn't in the allow-list above
 strictDepBuilds: true
 
-# SECURITY: reject dependencies sourced from git URLs
+# SECURITY: reject transitive dependencies sourced from git/tarball URLs
 blockExoticSubdeps: true
 ```
 
@@ -307,9 +306,10 @@ Attackers build on the npm versioning and publishing model which prefers and res
 > [!NOTE]
 > **How to implement?**
 > 
-> Set a persistent minimum release age in npm's configuration so that every `npm install` skips any package version published less than the specified number of days ago:
+> Set a persistent minimum release age in npm's configuration so that every `npm install` skips any package version published less than the specified number of days ago.
+> This repository's recommended baseline is **14 days** (also used by the agent skill under `skills/npm-security-best-practices/`):
 > ```bash
-> $ npm config set min-release-age 3
+> $ npm config set min-release-age 14
 > ```
 >
 > Or use the `--before` flag for a one-off install to only consider packages published before a specific date:
@@ -317,34 +317,36 @@ Attackers build on the npm versioning and publishing model which prefers and res
 > $ npm install express --before=2025-01-01
 > ```
 >
-> Or use shell command evaluation with `--before` to make it dynamic with a 7-day cooldown:
+> Or use shell command evaluation with `--before` to make it dynamic with a 14-day cooldown:
 > ```bash
-> $ npm install express --before="$(date -v -7d)"
+> $ npm install express --before="$(date -v -14d)"
 > ```
 >
-> Note: The `--before` approach requires manual date management and isn't ideal for automated workflows due to hardcoded dates. Prefer `min-release-age` for a persistent configuration.
+> Note: The `--before` approach requires manual date management and isn't ideal for automated workflows due to hardcoded dates. Prefer `min-release-age` for a persistent configuration. Shorter gates (e.g. 3–7 days) are valid softer policies if you accept more supply-chain risk.
 
 ### 3.1. npm / pnpm / Bun / Yarn minimumReleaseAge cooldown
 
 Configure npm, pnpm, Bun, or Yarn to delay package installations by setting a minimum release age in your package manager's configuration file.
 
+**Recommended baseline in this repo: 14 days** (keep package managers aligned).
+
 For npm, set `min-release-age` in your `.npmrc` (or via `npm config set`):
 
 ```ini
 # .npmrc
-min-release-age=3
+min-release-age=14
 ```
 
 Or set it globally so that all projects on your machine benefit:
 
 ```bash
-$ npm config set min-release-age 3
+$ npm config set min-release-age 14
 ```
 
 For pnpm 10.16+, use [`pnpm-workspace.yaml`](https://pnpm.io/settings#minimumreleaseageexclude):
 
 ```yaml
-minimumReleaseAge: 20160  # 2 weeks (in minutes)
+minimumReleaseAge: 20160  # 14 days (in minutes)
 # Allow instant upgrades for @types/react and typescript
 minimumReleaseAgeExclude:
   - '@types/react'
@@ -353,13 +355,13 @@ minimumReleaseAgeExclude:
 
 For Bun 1.3+, use [`bunfig.toml`](https://github.com/oven-sh/bun/issues/22679#issuecomment-3371327793):
 
-```yaml
+```toml
 # bunfig.toml
 [install]
-# Only install package versions published at least 3 days ago
-minimumReleaseAge = 259200 # seconds - in #23162 it'll allow "3d" too
+# Only install package versions published at least 14 days ago
+minimumReleaseAge = 1209600 # seconds
 
-# These packages will bypass the 3-day minimum age requirement
+# These packages will bypass the 14-day minimum age requirement
 minimumReleaseAgeExcludes = ["@types/bun", "typescript"]
 ```
 
@@ -367,8 +369,8 @@ For Yarn 4.10+, use [`.yarnrc.yml`](https://yarnpkg.com/configuration/yarnrc#npm
 
 ```yaml
 # .yarnrc.yml
-# Only consider npm package versions published at least 3 days ago
-npmMinimalAgeGate: "3d"
+# Only consider npm package versions published at least 14 days ago
+npmMinimalAgeGate: "14d"
 
 # These packages bypass the age gate (package descriptors or glob patterns)
 npmPreapprovedPackages:

@@ -7,6 +7,24 @@ This skill uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-08-08
+
+### Changed
+
+- **Goal shift:** skill procedure is now “implement basic npm security in the current repository,” not a flat practice dump.
+- **Cooldown baseline:** unified to **14 days** across npm (`min-release-age=14`), pnpm (`minimumReleaseAge: 20160`), Bun (`1209600` s), Yarn (`14d`), Dependabot/Renovate examples.
+- **`SKILL.md` rewrite:** procedure + task routers (`apply` | `audit` | `npx` | `publish` | `adopt-dep`); stable practice IDs P01–P17; assets are canonical.
+- **Merge-only assets:** configs document merge semantics; removed pre-seeded `allowBuilds` examples from the default pnpm baseline.
+- **`npx-offline-pattern.sh`:** parameterized CLI (`install` | `run` | `update`) with `NPX_WORKSPACE_DIR`.
+- **Reference:** practice IDs, 14-day baseline note, lockfile-lint via CI (not `preinstall`), offline npx helper usage.
+- **Packaging:** Grok install docs; SKILLCARD compatibility includes grok/claude/cursor; version `1.1.0`.
+
+### Removed
+
+- Duplicated full copy/paste config blocks from `SKILL.md` (read `assets/` instead).
+
+---
+
 ## [1.0.0] - 2026-05-27
 
 ### Added

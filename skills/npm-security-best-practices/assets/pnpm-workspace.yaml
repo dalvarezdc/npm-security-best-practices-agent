@@ -1,48 +1,39 @@
-# pnpm-workspace.yaml — hardened security baseline
+# pnpm security best practices — hardened baseline (14-day cooldown)
+# Canonical source for this skill. Agents must MERGE these keys into an existing
+# pnpm-workspace.yaml — never overwrite packages:, catalog:, or other project keys.
 # Source: https://github.com/dalvarezdc/npm-security-best-practices-agent
 #
-# Copy this file to your project root (or merge into your existing pnpm-workspace.yaml).
 # Requires pnpm 10.16+ for minimumReleaseAge, 10.21+ for trustPolicy,
 # 10.26+ for allowBuilds and blockExoticSubdeps.
 
-# SECURITY (#3): Block packages published less than 30 days ago (43200 minutes).
-# Prevents installing newly-released versions that may be part of a supply-chain attack.
-minimumReleaseAge: 43200
+# SECURITY (P03): Block packages published less than 14 days ago (20160 minutes).
+minimumReleaseAge: 20160
 
-# SECURITY (#3 opt-out): Allow instant upgrades for specific trusted, frequently-released packages.
-# Uncomment and adjust as needed.
+# SECURITY (P03 opt-out): Instant upgrades for specific trusted packages only.
+# Prefer narrow excludes over lowering the global gate.
 # minimumReleaseAgeExclude:
 #   - '@types/react'
 #   - typescript
 
-# SECURITY (#1.4): Reject a package version whose publish-time trust level has decreased
-# compared to a previously published version (e.g. previously shipped with OIDC provenance,
-# now published without). Early signal of account compromise.
+# SECURITY (P01b): Reject a package version whose publish-time trust level decreased
+# (e.g. previously OIDC provenance, now without). Early account-compromise signal.
 # Requires pnpm 10.21+.
 trustPolicy: no-downgrade
 
-# SECURITY (#1.4 opt-out): Bypass the trust check for specific packages/versions when needed.
-# Uncomment and adjust as needed.
+# SECURITY (P01b opt-out): Bypass trust check for specific packages/versions when needed.
 # trustPolicyExclude:
 #   - 'chokidar@4.0.3'
-#   - 'webpack@4.47.0 || 5.102.1'
 
-# SECURITY (#1.1): pnpm blocks install scripts by default (pnpm 10+).
-# Explicitly allow only vetted packages that legitimately need build scripts.
-# allowBuilds replaces deprecated onlyBuiltDependencies / ignoredBuiltDependencies (pnpm 10.26+).
-allowBuilds:
-  esbuild: true
-  # Add other packages that require build scripts here, e.g.:
-  # rolldown: true
-  # unrs-resolver: true
+# SECURITY (P01a): pnpm blocks install scripts by default (pnpm 10+).
+# Add packages only after verifying they legitimately need native builds.
+# allowBuilds replaces onlyBuiltDependencies / ignoredBuiltDependencies (pnpm 10.26+).
+# allowBuilds:
+#   esbuild: true
 
-# SECURITY (#1.1): Fail the install with a non-zero exit code if any dependency tries to run
-# a build script that is not in the allowBuilds allow-list above.
-# Turns silent warnings into CI-blocking failures. Requires pnpm 10.3+.
+# SECURITY (P01a): Fail install if any dependency runs a build script not in allowBuilds.
+# Requires pnpm 10.3+.
 strictDepBuilds: true
 
-# SECURITY (#2.1): Prevent transitive (indirect) dependencies from pulling code from
-# git repositories or raw tarball URLs — sources that bypass registry security scanning.
-# Direct dependencies declared in your root package.json are still permitted.
-# Requires pnpm 10.26+.
+# SECURITY (P02a): Block transitive deps from git repos or raw tarball URLs.
+# Direct deps in the root package.json remain allowed. Requires pnpm 10.26+.
 blockExoticSubdeps: true

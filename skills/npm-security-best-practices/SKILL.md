@@ -1,135 +1,189 @@
 ---
 name: npm-security-best-practices
-description: Use when installing npm packages, configuring .npmrc or pnpm-workspace.yaml, running npx, reviewing lockfiles, auditing dependencies, configuring automated dependency updates (Dependabot, Renovate, Snyk), or publishing to npm. Covers supply chain hardening, postinstall scripts, git-based deps, install cooldown, lockfile injection, npx hardening, plaintext secrets, dev containers, provenance, OIDC publishing, and dependency confusion attacks.
+description: >
+  Implement basic npm/pnpm/yarn/bun supply-chain hardening in the current repository.
+  Use when installing packages, editing .npmrc or pnpm-workspace.yaml, running npx,
+  reviewing lockfiles, configuring Dependabot/Renovate/Snyk, publishing to npm,
+  evaluating a new dependency, or when the user asks to harden npm security.
+  Use when the user runs /npm-security-best-practices.
+when-to-use: >
+  harden npm security, npm install, pnpm add, yarn add, bun add, npx, lockfile,
+  .npmrc, postinstall, supply chain, provenance, dependency confusion
+argument-hint: "[apply|audit|npx|publish]"
+metadata:
+  short-description: "Harden npm security in this repo"
+  author: dalvarezdc
+  version: "1.1.0"
 ---
 
 # npm Security Best Practices
 
-## Overview
+## Goal
 
-17 security practices for npm, pnpm, Bun, and Yarn covering supply chain
-hardening, safe installation, lockfile integrity, and maintainer security.
+Apply a **minimum secure baseline** to the repository you are working in, using the
+configs and patterns in this skill. Prefer small, merged config changes over dumping
+the full practice list into chat.
 
-**Core principle:** Default npm settings are not secure. Each practice corrects
-a specific attack vector with a concrete configuration change.
+**Canonical baselines live in `assets/`.** If any prose disagrees with those files, assets win.
 
-**For full detail on any practice, see `references/reference.md` in this directory.**
+**Default cooldown:** 14 days (`min-release-age=14`, pnpm `minimumReleaseAge: 20160` minutes).
 
-## When to Use
+**Core principle:** default package-manager settings are not secure enough for supply-chain risk.
 
-Load this skill when you are about to:
-- Run `npm install`, `pnpm add`, `bun add`, `yarn add`, or `npx`
-- Write or review `.npmrc`, `pnpm-workspace.yaml`, `bunfig.toml`, `.yarnrc.yml`
-- Review or commit a lockfile (`package-lock.json`, `pnpm-lock.yaml`, `bun.lock`)
-- Configure Dependabot, Renovate, or Snyk automated PRs
-- Publish a package to the npm registry
-- Evaluate a new npm dependency for adoption
+For deep practice detail, open `references/reference.md` only for the practice IDs you need.
 
-## Quick Reference
+## Procedure (always)
 
-### Install-Time Security
+1. **Detect** the package manager(s) and existing config in the project root (and workspace roots):
+   - lockfiles: `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `bun.lockb`
+   - config: `.npmrc`, `pnpm-workspace.yaml`, `.yarnrc.yml`, `bunfig.toml`, `package.json`
+2. **Classify** the task: `apply` (default) | `audit` | `npx` | `publish` | `adopt-dep`.
+3. **Apply the matching checklist** below. Do not recast all 17 practices unless asked.
+4. **Merge, never blind-overwrite** existing package-manager config (see Rules).
+5. **Summarize** what changed, what still needs a human decision, and any PM version floors.
 
-| # | Practice | Severity | Key Config |
-|---|----------|----------|------------|
-| 1 | Disable post-install scripts | **Critical** | `ignore-scripts=true` in `.npmrc` |
-| 1.1 | pnpm: allowBuilds allowlist | High | `allowBuilds: { esbuild: true }` in `pnpm-workspace.yaml` |
-| 1.4 | pnpm trust policy no-downgrade | High | `trustPolicy: no-downgrade` |
-| 2 | Block git-based deps | **Critical** | `allow-git=none` in `.npmrc` (npm 11.10+) |
-| 2.1 | pnpm blockExoticSubdeps | High | `blockExoticSubdeps: true` |
-| 3 | Install with cooldown | High | `min-release-age=30` in `.npmrc` |
-| 3.1 | pnpm/Bun/Yarn cooldown | High | `minimumReleaseAge: 43200` (minutes) |
-| 4 | Harden installs (npq / sfw) | High | `npm install -g npq` or `npm install -g sfw` |
-| 5 | Prevent lockfile injection | High | `lockfile-lint --validate-https` |
-| 6 | Use `npm ci` not `npm install` | High | `npm ci` / `pnpm install --frozen-lockfile` |
-| 7 | Avoid blind upgrades | Medium | `npx npm-check-updates --interactive` |
-| 8 | Harden npx execution | **Critical** | `npx --no --offline --workspace $HOME/mcp <pkg>` |
+## Rules
 
-### Developer Environment Security
+- **MERGE** security keys into existing `.npmrc` / `pnpm-workspace.yaml` / etc. Never replace a file that already has registry scopes, `packages:`, catalogs, or auth-related settings.
+- **Do not** invent `allowBuilds` entries. Start from the asset (no pre-seeded native packages). Add a package to `allowBuilds` only when install fails on a verified legitimate build and the user accepts it.
+- **Do not** recommend blind upgrades: `npm update`, `npx npm-check-updates -u`, `pnpm update`, `yarn up`, `bun update` without review.
+- **Prefer** `npm ci` / `pnpm install --frozen-lockfile` / `yarn install --immutable` / `bun install --frozen-lockfile` when a lockfile exists.
+- **Cooldown exceptions** (urgent security fix newer than 14 days): allow a **one-shot, package-scoped** exclude (e.g. pnpm `minimumReleaseAgeExclude` / `pnpm audit --fix`). Never disable the global gate permanently to land one CVE fix.
+- **Assets to read and merge from:**
+  - `assets/.npmrc` — npm baseline
+  - `assets/pnpm-workspace.yaml` — pnpm baseline keys
+  - `assets/npx-offline-pattern.sh` — offline npx helper (`install` / `run` / `update`)
 
-| # | Practice | Severity | Key Config |
-|---|----------|----------|------------|
-| 9 | No plaintext secrets in .env | **Critical** | Use `op://vault/item/field` references + `op run --` |
-| 10 | Work in dev containers | Medium | `.devcontainer/devcontainer.json` |
+## Task: apply (default) — harden this repo
 
-### npm Maintainer Security
+Implement the baseline appropriate to detected PMs.
 
-| # | Practice | Severity | Key Config |
-|---|----------|----------|------------|
-| 11 | Enable 2FA for npm accounts | **Critical** | `npm profile enable-2fa auth-and-writes` |
-| 12 | Publish with provenance | High | `npm publish --provenance` (GitHub Actions) |
-| 13 | Publish with OIDC (trusted publisher) | High | Set up trusted publisher on npmjs.com |
-| 14 | Reduce dependency tree | Medium | Use native JS instead of utility libs |
+### npm (or npm-compatible `.npmrc`)
 
-### Package Health & Registry
+Merge from `assets/.npmrc`:
 
-| # | Practice | Severity | Key Config |
-|---|----------|----------|------------|
-| 15 | Consult Snyk Security Database | Medium | `security.snyk.io/package/npm/<name>` |
-| 16 | Don't trust npmjs.org UI | Medium | `npm pack <pkg> --dry-run` to inspect tarball |
-| 17 | Prevent dependency confusion | High | Use `@yourorg/` scopes + per-scope registry in `.npmrc` |
+| Key | Value | ID |
+|-----|--------|-----|
+| `ignore-scripts` | `true` | P01 |
+| `allow-git` | `none` | P02 |
+| `min-release-age` | `14` | P03 |
 
-## Critical Configs — Copy/Paste
+Preserve existing `@scope:registry=...` and other non-conflicting keys.
 
-### `.npmrc` (minimum secure baseline)
+### pnpm
 
-```ini
-# Disable post-install scripts
-ignore-scripts=true
+Merge from `assets/pnpm-workspace.yaml` (security keys only):
 
-# Block git-sourced dependencies (npm 11.10+)
-allow-git=none
+| Key | Value | ID |
+|-----|--------|-----|
+| `minimumReleaseAge` | `20160` | P03 |
+| `trustPolicy` | `no-downgrade` | P01b |
+| `strictDepBuilds` | `true` | P01a |
+| `blockExoticSubdeps` | `true` | P02a |
 
-# Only install packages published 30+ days ago
-min-release-age=30
-```
+Do **not** remove existing `packages:`, `catalog:`, or project-specific keys. Only add `allowBuilds` entries when required and vetted.
 
-### `pnpm-workspace.yaml` (minimum secure baseline)
+### yarn (Berry)
+
+If `.yarnrc.yml` exists or Yarn is the PM, set at least:
 
 ```yaml
-# Block packages newer than 30 days (43200 minutes)
-minimumReleaseAge: 43200
-
-# Reject trust-level regressions (pnpm 10.21+)
-trustPolicy: no-downgrade
-
-# Allow only explicitly vetted build scripts
-allowBuilds:
-  esbuild: true
-
-# Fail if any unallowed dep tries to run a build script
-strictDepBuilds: true
-
-# Block transitive deps from exotic (git/tarball) sources
-blockExoticSubdeps: true
+npmMinimalAgeGate: "14d"
 ```
 
-### Hardened `npx` pattern
+Block git / exotic sources using Yarn’s project-appropriate settings; see reference P02 / P03.
+
+### bun
+
+If `bunfig.toml` exists or Bun is the PM:
+
+```toml
+[install]
+minimumReleaseAge = 1209600  # 14 days in seconds
+```
+
+Bun disables lifecycle scripts by default; use `trustedDependencies` only for vetted packages (P01).
+
+### Always when touching install workflow
+
+- Prefer frozen lockfile installs in CI and docs you edit (P06).
+- If the repo uses Dependabot/Renovate/Snyk upgrade bots, set a **≥7 day** cooldown (14 days preferred to match the local gate); see reference P03 bots.
+- Optional but high value: `lockfile-lint` in CI (not as `preinstall` under `ignore-scripts`) — P05.
+- Optional: document `npq` / `sfw` for interactive installs — P04.
+
+## Task: audit — review current hardening
+
+Report gaps vs baseline without changing files unless the user asks to fix them:
+
+1. Which of P01–P03 (and pnpm P01a/P01b/P02a) are present?
+2. Are secrets plaintext in `.env`? (P09)
+3. Is CI using frozen lockfiles? (P06)
+4. Any git/exotic dependency URLs in manifests/lockfiles? (P02)
+5. Suggested minimal diff to reach baseline.
+
+## Task: npx — harden execution
+
+Never recommend bare `npx <package>` for anything sensitive (MCP servers, tools with FS/network access).
+
+Use `assets/npx-offline-pattern.sh`:
 
 ```bash
-# Pre-install in a workspace once
-mkdir -p $HOME/mcp && cd $HOME/mcp && npm init -y
-npm install @modelcontextprotocol/server-filesystem
+# once (or when adding tools)
+./assets/npx-offline-pattern.sh install <package>
 
-# Run offline — no live registry fetch
-npx --include-workspace-root --workspace $HOME/mcp --no --offline \
-  @modelcontextprotocol/server-filesystem /path/to/dir
+# every run (offline, lockfile-backed)
+./assets/npx-offline-pattern.sh run <package> -- [args...]
 ```
 
-## Assets — Copy directly into user projects
+Or the equivalent `npx --workspace … --no --offline` flags from reference P08. For project MCP config, point `command`/`args` at the offline form.
 
-The `assets/` directory contains ready-to-use configuration files. When a
-user needs a hardened config, copy the appropriate asset to their project root:
+## Task: publish — maintainer path
 
-| File | Copy to | Description |
-|------|---------|-------------|
-| `assets/.npmrc` | `.npmrc` | Hardened npm baseline (`ignore-scripts`, `allow-git=none`, `min-release-age=30`) |
-| `assets/pnpm-workspace.yaml` | `pnpm-workspace.yaml` | Hardened pnpm baseline (`minimumReleaseAge`, `trustPolicy`, `allowBuilds`, `strictDepBuilds`, `blockExoticSubdeps`) |
-| `assets/npx-offline-pattern.sh` | Reference / adapt | Two-step hardened npx execution (pre-install workspace + offline-only invocation) |
+When the user is publishing:
 
-Each file contains inline comments explaining the security purpose of every
-setting and the minimum package manager version required.
+1. Enable 2FA auth-and-writes (P11)
+2. Prefer OIDC trusted publisher + provenance (P12–P13)
+3. Minimize dependency surface (P14)
 
-## Load references/reference.md for full detail
+## Task: adopt-dep — evaluate a new package
 
-For complete explanations, all config options, Bun/Yarn equivalents, CI/CD
-integration patterns, and FAQ, read `references/reference.md` in this directory.
+Before adding a dependency:
+
+1. Inspect tarball / metadata, not only the npm website UI (P16)
+2. Check security.snyk.io health signals (P15)
+3. Prefer packages already older than the 14-day gate, or call out the bypass explicitly
+4. Avoid new git-URL dependencies (P02)
+5. For private/internal names, use scopes + registry mapping (P17)
+
+## Practice index (lookup only)
+
+Open `references/reference.md` for full detail.
+
+| ID | Practice | Severity | When |
+|----|----------|----------|------|
+| P01 | Disable lifecycle scripts | Critical | every install config |
+| P01a | pnpm allowBuilds + strictDepBuilds | High | pnpm projects |
+| P01b | pnpm trustPolicy no-downgrade | High | pnpm 10.21+ |
+| P02 | Block git-based deps | Critical | every install config |
+| P02a | pnpm blockExoticSubdeps | High | pnpm 10.26+ |
+| P03 | Install cooldown (14 days) | High | every install config |
+| P04 | Harden installs (npq / sfw) | High | interactive install workflow |
+| P05 | Lockfile injection checks | High | CI / lint |
+| P06 | Frozen lockfile installs | High | CI and local install guidance |
+| P07 | No blind upgrades | Medium | update / renovate flows |
+| P08 | Harden npx | Critical | npx / MCP |
+| P09 | No plaintext secrets in .env | Critical | env / runtime |
+| P10 | Dev containers | Medium | local isolation |
+| P11 | npm 2FA | Critical | publish |
+| P12 | Provenance | High | publish |
+| P13 | OIDC trusted publisher | High | publish |
+| P14 | Reduce dependency tree | Medium | publish / adopt-dep |
+| P15 | Snyk package health | Medium | adopt-dep |
+| P16 | Don’t trust npmjs.org UI alone | Medium | adopt-dep |
+| P17 | Dependency confusion defenses | High | private registries |
+
+## Done criteria (apply)
+
+- Security keys from the relevant asset(s) are present in project config (merged).
+- No existing workspace/registry settings were wiped.
+- User got a short summary of changes + any follow-ups (allowBuilds, bot cooldowns, CI frozen lockfile).

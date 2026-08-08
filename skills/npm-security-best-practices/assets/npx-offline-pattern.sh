@@ -1,67 +1,114 @@
 #!/usr/bin/env bash
-# npx-offline-pattern.sh — hardened npx execution pattern
+# npx-offline-pattern.sh — hardened npx: pre-install once, run offline always
 # Source: https://github.com/dalvarezdc/npm-security-best-practices-agent
 #
-# SECURITY (#8): npx resolves, downloads, and executes packages from the npm registry
-# live — with no lockfile, no hash verification, and no cooldown. This script shows
-# the two-step pattern to pre-install packages with a lockfile and then run them
-# strictly offline, preventing any live registry fetch at execution time.
+# SECURITY (P08): plain `npx <pkg>` downloads and executes latest from the registry
+# with no lockfile, hash check, or cooldown. This script keeps a dedicated workspace
+# with a lockfile and only runs packages that are already installed there.
 #
 # Usage:
-#   1. Run the "Step 1: Pre-install" block ONCE (or when updating packages).
-#   2. Run the "Step 2: Execute offline" block every time you need to invoke the package.
+#   npx-offline-pattern.sh install <package> [<package>...]
+#   npx-offline-pattern.sh run <package> [-- <args>...]
+#   npx-offline-pattern.sh update
 #
-# Replace @modelcontextprotocol/server-filesystem and /path/to/dir with your own
-# package and arguments.
+# Environment:
+#   NPX_WORKSPACE_DIR  Workspace for lockfile + installs (default: $HOME/mcp)
+#
+# Examples:
+#   ./npx-offline-pattern.sh install @modelcontextprotocol/server-filesystem
+#   ./npx-offline-pattern.sh run @modelcontextprotocol/server-filesystem -- /path/to/dir
+#   NPX_WORKSPACE_DIR=$HOME/tools ./npx-offline-pattern.sh install cowsay
+#   ./npx-offline-pattern.sh run cowsay -- hello
 
 set -euo pipefail
 
-WORKSPACE_DIR="${HOME}/mcp"
+WORKSPACE_DIR="${NPX_WORKSPACE_DIR:-${HOME}/mcp}"
 
-# ---------------------------------------------------------------------------
-# Step 1: Pre-install in a dedicated workspace with a lockfile.
-# Run this once to set up, and again after running `npm update` to upgrade.
-# ---------------------------------------------------------------------------
+usage() {
+  cat <<'EOF'
+Usage:
+  npx-offline-pattern.sh install <package> [<package>...]
+  npx-offline-pattern.sh run <package> [-- <args>...]
+  npx-offline-pattern.sh update
 
-mkdir -p "${WORKSPACE_DIR}"
-cd "${WORKSPACE_DIR}"
+Environment:
+  NPX_WORKSPACE_DIR   default: $HOME/mcp
+EOF
+}
 
-# Initialise a minimal package.json if one doesn't already exist.
-if [ ! -f package.json ]; then
-  npm init -y
-fi
+ensure_workspace() {
+  mkdir -p "${WORKSPACE_DIR}"
+  if [ ! -f "${WORKSPACE_DIR}/package.json" ]; then
+    # npm init needs a cwd; avoid relying on caller location
+    (cd "${WORKSPACE_DIR}" && npm init -y >/dev/null)
+  fi
+}
 
-# Install the package(s) you intend to run via npx.
-# This creates / updates package-lock.json — commit it (or review it) before
-# running Step 2 to ensure the lockfile reflects only vetted versions.
-npm install @modelcontextprotocol/server-filesystem
+cmd_install() {
+  if [ "$#" -lt 1 ]; then
+    echo "error: install requires at least one package name" >&2
+    usage >&2
+    exit 1
+  fi
+  ensure_workspace
+  (cd "${WORKSPACE_DIR}" && npm install "$@")
+  echo "Installed in ${WORKSPACE_DIR}. Review package-lock.json before relying on offline runs."
+}
 
-# ---------------------------------------------------------------------------
-# Step 2: Execute offline — no live registry fetch allowed.
-#
-#   --include-workspace-root   Include the workspace root package in resolution
-#   --workspace <dir>          Resolve packages from this pre-installed workspace
-#   --no                       Refuse to download any package not already installed
-#   --offline                  Prevent ALL network requests (hard fail, not fallback)
-#
-# Together, --no and --offline guarantee that only pre-vetted, lockfile-verified
-# code is executed — even if the package was compromised between two runs.
-# ---------------------------------------------------------------------------
+cmd_run() {
+  if [ "$#" -lt 1 ]; then
+    echo "error: run requires a package name" >&2
+    usage >&2
+    exit 1
+  fi
+  local pkg="$1"
+  shift
+  # Allow optional "--" before package args
+  if [ "${1:-}" = "--" ]; then
+    shift
+  fi
+  if [ ! -f "${WORKSPACE_DIR}/package.json" ]; then
+    echo "error: workspace ${WORKSPACE_DIR} is not initialized. Run: $0 install ${pkg}" >&2
+    exit 1
+  fi
+  # --no: do not install missing packages
+  # --offline: refuse all registry network access
+  npx \
+    --include-workspace-root \
+    --workspace "${WORKSPACE_DIR}" \
+    --no \
+    --offline \
+    "${pkg}" \
+    "$@"
+}
 
-npx \
-  --include-workspace-root \
-  --workspace "${WORKSPACE_DIR}" \
-  --no \
-  --offline \
-  @modelcontextprotocol/server-filesystem \
-  /path/to/dir
+cmd_update() {
+  if [ ! -f "${WORKSPACE_DIR}/package.json" ]; then
+    echo "error: workspace ${WORKSPACE_DIR} is not initialized" >&2
+    exit 1
+  fi
+  (cd "${WORKSPACE_DIR}" && npm update)
+  echo "Updated ${WORKSPACE_DIR}. Review package-lock.json before next offline run."
+}
 
-# ---------------------------------------------------------------------------
-# Updating pre-vetted packages
-# ---------------------------------------------------------------------------
-# To safely upgrade, cd into the workspace and run npm update, then review
-# the lockfile diff before your next invocation:
-#
-#   cd "${WORKSPACE_DIR}" && npm update
-#   git diff package-lock.json   # review before accepting
-# ---------------------------------------------------------------------------
+main() {
+  if [ "$#" -lt 1 ]; then
+    usage >&2
+    exit 1
+  fi
+  local action="$1"
+  shift
+  case "${action}" in
+    install) cmd_install "$@" ;;
+    run)     cmd_run "$@" ;;
+    update)  cmd_update ;;
+    -h|--help|help) usage ;;
+    *)
+      echo "error: unknown command '${action}'" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

@@ -1,93 +1,73 @@
 # npm-security-best-practices — Agent Skill
 
-An agent skill for `gemini-cli` and `opencode` that enforces the [npm Security Best Practices](https://github.com/lirantal/npm-security-best-practices) guide by Liran Tal. When triggered, the skill provides concrete, copy/paste-ready configurations and step-by-step instructions covering 17 security practices across npm, pnpm, Bun, and Yarn.
+An agent skill that **implements basic npm supply-chain hardening in the repository it is working in**, based on the [npm Security Best Practices](https://github.com/lirantal/npm-security-best-practices) guide by Liran Tal.
+
+Default baseline includes lifecycle-script blocking, git-dep blocking, and a **14-day install cooldown**, with merge-safe application of configs from `assets/`.
 
 ---
 
 ## What the skill does
 
-The skill loads when an agent detects security-relevant npm/package-manager activity and provides:
+When loaded, the agent should:
 
-- **Immediate copy/paste configs** — hardened `.npmrc` and `pnpm-workspace.yaml` baselines the agent can drop directly into a user project.
-- **Hardened `npx` execution** — a two-step offline pattern preventing live registry fetches at execution time.
-- **A 17-practice quick-reference table** — severity ratings and the exact configuration key for each practice.
-- **Full detail on demand** — `references/reference.md` contains the complete condensed reference for every practice, including Bun, Yarn, Dependabot, Renovate, and Snyk equivalents.
+1. Detect the package manager and existing config in the current project
+2. **Merge** (not overwrite) security keys from `assets/`
+3. Follow task-specific checklists: `apply` | `audit` | `npx` | `publish` | `adopt-dep`
+4. Open `references/reference.md` only for practice detail it actually needs
 
----
+Assets:
 
-## When the skill activates
-
-The skill loads automatically when you are about to:
-
-- Run `npm install`, `pnpm add`, `bun add`, `yarn add`, or `npx`
-- Write or review `.npmrc`, `pnpm-workspace.yaml`, `bunfig.toml`, or `.yarnrc.yml`
-- Review or commit a lockfile (`package-lock.json`, `pnpm-lock.yaml`, `bun.lock`)
-- Configure Dependabot, Renovate, or Snyk automated dependency PRs
-- Publish a package to the npm registry
-- Evaluate a new npm dependency for adoption
+| File | Role |
+|------|------|
+| `assets/.npmrc` | Canonical npm baseline — **merge** into project `.npmrc` |
+| `assets/pnpm-workspace.yaml` | Canonical pnpm security keys — **merge** into existing workspace file |
+| `assets/npx-offline-pattern.sh` | Offline npx helper: `install` / `run` / `update` |
 
 ---
 
-## The 17 practices at a glance
+## When it activates
 
-| # | Practice | Severity |
-|---|----------|----------|
-| 1 | Disable post-install scripts | **Critical** |
-| 1.1 | pnpm: allowBuilds allowlist | High |
-| 1.4 | pnpm trust policy no-downgrade | High |
-| 2 | Block git-based dependencies | **Critical** |
-| 2.1 | pnpm blockExoticSubdeps | High |
-| 3 | Install with cooldown | High |
-| 4 | Harden installs (npq / sfw) | High |
-| 5 | Prevent lockfile injection | High |
-| 6 | Use `npm ci` not `npm install` | High |
-| 7 | Avoid blind package upgrades | Medium |
-| 8 | Harden npx execution | **Critical** |
-| 9 | No plaintext secrets in .env | **Critical** |
-| 10 | Work in dev containers | Medium |
-| 11 | Enable 2FA for npm accounts | **Critical** |
-| 12 | Publish with provenance | High |
-| 13 | Publish with OIDC | High |
-| 14 | Reduce dependency tree | Medium |
-| 15 | Consult Snyk Security Database | Medium |
-| 16 | Don't trust npmjs.org UI | Medium |
-| 17 | Prevent dependency confusion | High |
-
----
-
-## Skill assets
-
-The `assets/` directory contains ready-to-use configuration files agents can copy directly into user projects:
-
-| File | Description |
-|------|-------------|
-| `assets/.npmrc` | Hardened npm baseline — `ignore-scripts`, `allow-git=none`, `min-release-age=30` |
-| `assets/pnpm-workspace.yaml` | Hardened pnpm baseline — `minimumReleaseAge`, `trustPolicy`, `allowBuilds`, `strictDepBuilds`, `blockExoticSubdeps` |
-| `assets/npx-offline-pattern.sh` | Two-step hardened npx execution script (pre-install workspace + offline-only invocation) |
-
-Full practice documentation is in `references/reference.md`.
+- Hardening or reviewing npm/pnpm/yarn/bun security in a repo
+- `npm install`, `pnpm add`, `bun add`, `yarn add`, or `npx`
+- Editing `.npmrc`, `pnpm-workspace.yaml`, `bunfig.toml`, `.yarnrc.yml`
+- Lockfile review; Dependabot / Renovate / Snyk setup
+- Publishing or evaluating a new dependency
 
 ---
 
 ## Installation
 
-### Installation for Gemini CLI
+### Grok
 
-Since Gemini CLI supports the GitHub CLI skills extension, you can install this directly from the subfolder by running:
+User skill (recommended while developing this repo):
+
+```bash
+mkdir -p ~/.grok/skills
+ln -s "$(pwd)/skills/npm-security-best-practices" ~/.grok/skills/npm-security-best-practices
+```
+
+Or install the repo as a plugin (plugin-shaped `skills/` layout):
+
+```bash
+grok plugin install . --trust
+# or: grok plugin install dalvarezdc/npm-security-best-practices-agent --trust
+```
+
+Verify: `grok inspect` or `/skills` in the TUI. Invoke: `/npm-security-best-practices`.
+
+### Gemini CLI
 
 ```bash
 gh skill install dalvarezdc/npm-security-best-practices-agent npm-security-best-practices
 ```
 
-### Installation for Opencode
-
-To use this skill in Opencode, add it to your project by running:
+### Opencode
 
 ```bash
 opencode skill add https://github.com/dalvarezdc/npm-security-best-practices-agent/tree/main/skills/npm-security-best-practices
 ```
 
-Or manually link it in your `.opencode/skills.yaml` file:
+Or in `.opencode/skills.yaml`:
 
 ```yaml
 skills:
@@ -95,6 +75,23 @@ skills:
     path: https://github.com/dalvarezdc/npm-security-best-practices-agent
     subpath: skills/npm-security-best-practices
 ```
+
+### Manual / other agents
+
+Copy or symlink `skills/npm-security-best-practices` into the agent’s skills directory (must contain `SKILL.md`).
+
+---
+
+## Baseline policy
+
+| Setting | Value |
+|---------|--------|
+| npm `min-release-age` | `14` (days) |
+| pnpm `minimumReleaseAge` | `20160` (minutes = 14 days) |
+| bun `minimumReleaseAge` | `1209600` (seconds = 14 days) |
+| yarn `npmMinimalAgeGate` | `14d` |
+
+Canonical files: `assets/.npmrc`, `assets/pnpm-workspace.yaml`.
 
 ---
 
