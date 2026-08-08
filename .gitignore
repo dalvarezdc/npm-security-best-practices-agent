@@ -1,0 +1,19 @@
+# Dependencies / install artifacts (repo is skill+docs first)
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+npm-debug.log*
+.pnpm-store/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Agent local state (keep project skills intentional)
+.grok/
+!.agents/skills

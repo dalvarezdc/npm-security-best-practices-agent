@@ -11,6 +11,8 @@ This skill uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Positioning:** independent skill product (not an official third-party list fork); multi-agent install docs (Grok, Claude, Gemini, OpenAI Codex, DeepSeek, OpenCode, Cursor).
+- **Evals + CI:** `evals.md` golden scenarios; `scripts/check-skill.sh` + GitHub Action.
 - **Goal shift:** skill procedure is now “implement basic npm security in the current repository,” not a flat practice dump.
 - **Cooldown baseline:** unified to **14 days** across npm (`min-release-age=14`), pnpm (`minimumReleaseAge: 20160`), Bun (`1209600` s), Yarn (`14d`), Dependabot/Renovate examples.
 - **`SKILL.md` rewrite:** procedure + task routers (`apply` | `audit` | `npx` | `publish` | `adopt-dep`); stable practice IDs P01–P17; assets are canonical.

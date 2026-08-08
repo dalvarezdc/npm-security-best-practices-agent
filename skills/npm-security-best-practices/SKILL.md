@@ -24,6 +24,9 @@ Apply a **minimum secure baseline** to the repository you are working in, using 
 configs and patterns in this skill. Prefer small, merged config changes over dumping
 the full practice list into chat.
 
+This skill is an **independent** hardening procedure + asset pack for agents (Grok, Claude,
+Gemini, Codex, DeepSeek, and other SKILL.md hosts). It is not a generic “awesome list” dump.
+
 **Canonical baselines live in `assets/`.** If any prose disagrees with those files, assets win.
 
 **Default cooldown:** 14 days (`min-release-age=14`, pnpm `minimumReleaseAge: 20160` minutes).

@@ -1,0 +1,23 @@
+name: skill-check
+
+on:
+  push:
+    paths:
+      - "skills/**"
+      - "scripts/check-skill.sh"
+      - ".npmrc"
+      - ".github/workflows/skill-check.yml"
+  pull_request:
+    paths:
+      - "skills/**"
+      - "scripts/check-skill.sh"
+      - ".npmrc"
+      - ".github/workflows/skill-check.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run skill integrity checks
+        run: ./scripts/check-skill.sh

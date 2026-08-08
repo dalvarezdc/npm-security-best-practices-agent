@@ -9,9 +9,11 @@ license: MIT
 
 compatibility:
   - grok
-  - gemini-cli
-  - opencode
   - claude
+  - gemini-cli
+  - openai-codex
+  - deepseek
+  - opencode
   - cursor
 
 trigger: >

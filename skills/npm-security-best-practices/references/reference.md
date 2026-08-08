@@ -1,6 +1,8 @@
 # npm Security Best Practices — Full Reference
 
-Condensed from the [npm-security-best-practices](https://github.com/lirantal/npm-security-best-practices) project by Liran Tal.
+Independent practice reference for this skill package. Threat model and controls
+align with public npm supply-chain research; this document is maintained here and
+is **not** an official fork of any third-party list.
 
 **Skill baseline (canonical):** 14-day install cooldown. See `assets/.npmrc` and
 `assets/pnpm-workspace.yaml` for the exact keys this skill merges into projects.
